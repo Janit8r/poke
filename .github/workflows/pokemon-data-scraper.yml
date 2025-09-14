@@ -21,6 +21,7 @@ env:
 jobs:
   scrape-pokemon-data:
     runs-on: ubuntu-latest
+    timeout-minutes: 240  # 4小时超时
     
     steps:
     # 检出代码
@@ -239,6 +240,3 @@ jobs:
         else
           echo "❌ Pokemon数据抓取失败，请查看日志"
         fi
-
-# 设置作业超时（4小时）
-  timeout-minutes: 240
