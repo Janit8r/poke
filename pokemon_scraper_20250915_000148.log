@@ -1,0 +1,33 @@
+﻿[2025-09-15 00:01:48] Script Version: 1.0
+[2025-09-15 00:01:48] Start Time: 2025-09-15 00:01:48
+[2025-09-15 00:01:48] Log File: .\pokemon_scraper_20250915_000148.log
+[2025-09-15 00:01:48] Estimated total time: 0s
+[2025-09-15 00:01:48] Checking Python environment...
+[2025-09-15 00:01:48] Python check passed: Python 3.13.7
+[2025-09-15 00:02:58] Executing all scripts
+[2025-09-15 00:02:58] [1/8] Starting: Pokemon List
+[2025-09-15 00:02:58] Estimated time: 30s
+[2025-09-15 00:02:59] Pokemon List completed successfully
+[2025-09-15 00:02:59] Actual time: 1s
+[2025-09-15 00:02:59] [2/8] Starting: Ability List
+[2025-09-15 00:02:59] Estimated time: 20s
+[2025-09-15 00:03:08] Ability List completed successfully
+[2025-09-15 00:03:08] Actual time: 9s
+[2025-09-15 00:03:08] [3/8] Starting: Move List
+[2025-09-15 00:03:08] Estimated time: 25s
+[2025-09-15 00:03:23] Move List completed successfully
+[2025-09-15 00:03:23] Actual time: 15s
+[2025-09-15 00:03:23] [4/8] Starting: Pokemon Details
+[2025-09-15 00:03:23] Estimated time: 30m0s
+[2025-09-15 00:04:10] Pokemon Details completed successfully
+[2025-09-15 00:04:10] Actual time: 47s
+[2025-09-15 00:04:10] [5/8] Starting: Ability Details
+[2025-09-15 00:04:10] Estimated time: 10m0s
+[2025-09-15 00:04:19] Ability Details completed successfully
+[2025-09-15 00:04:19] Actual time: 9s
+[2025-09-15 00:04:19] [6/8] Starting: Move Details
+[2025-09-15 00:04:19] Estimated time: 15m0s
+[2025-09-15 00:04:39] Move Details completed successfully
+[2025-09-15 00:04:39] Actual time: 19s
+[2025-09-15 00:04:39] [7/8] Starting: Full Pokemon List
+[2025-09-15 00:04:39] Estimated time: 2m0s

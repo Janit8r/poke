@@ -1,0 +1,244 @@
+name: Pokemon Data Scraper
+
+# 触发条件
+on:
+  # 手动触发
+  workflow_dispatch:
+    inputs:
+      skip_images:
+        description: '跳过图片下载 (Skip image download)'
+        required: false
+        default: 'false'
+        type: boolean
+  # 定时触发 - 每周日UTC时间0点（北京时间8点）
+  schedule:
+    - cron: '0 0 * * 0'
+
+# 环境变量
+env:
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  scrape-pokemon-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # 检出代码
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # 设置Python环境
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    # 缓存Python依赖
+    - name: Cache Python dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    # 安装系统依赖（Chrome浏览器和WebDriver）
+    - name: Install Chrome and dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget gnupg unzip
+        # 安装Chrome
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+        # 安装ChromeDriver
+        CHROMEDRIVER_VERSION=$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE)
+        wget -N http://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip
+        unzip chromedriver_linux64.zip
+        sudo mv chromedriver /usr/local/bin/
+        sudo chmod +x /usr/local/bin/chromedriver
+        # 验证安装
+        google-chrome --version
+        chromedriver --version
+
+    # 安装Python依赖
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    # 创建必要的目录
+    - name: Create directories
+      run: |
+        mkdir -p data/{pokemon,move,ability,images/{dream,official,home}}
+        mkdir -p logs
+
+    # 运行数据抓取脚本
+    - name: Run data scraping scripts
+      run: |
+        echo "开始抓取Pokemon数据..."
+        cd scripts
+        
+        # 按顺序执行脚本
+        echo "1. 抓取宝可梦基础列表..."
+        python pokemon_list.py
+        
+        echo "2. 抓取特性列表..."
+        python ability_list.py
+        
+        echo "3. 抓取招式列表..."
+        python move_list.py
+        
+        echo "4. 抓取宝可梦详细信息..."
+        python pokemon.py
+        
+        echo "5. 抓取特性详细信息..."
+        python ability.py
+        
+        echo "6. 抓取招式详细信息..."
+        python move.py
+        
+        echo "7. 生成完整宝可梦列表..."
+        python pokemon_full_list.py
+        
+        # 条件性执行图片下载
+        if [ "${{ github.event.inputs.skip_images }}" != "true" ]; then
+          echo "8. 下载版权绘图片..."
+          python download_dream_image.py
+        else
+          echo "8. 跳过图片下载..."
+        fi
+        
+        echo "数据抓取完成！"
+
+    # 生成数据统计报告
+    - name: Generate data statistics
+      run: |
+        cd data
+        echo "# Pokemon数据抓取报告 - $(date)" > ../scraping_report.md
+        echo "" >> ../scraping_report.md
+        
+        # 统计文件数量
+        echo "## 数据文件统计" >> ../scraping_report.md
+        echo "- 宝可梦数据: $(find pokemon -name "*.json" | wc -l) 个文件" >> ../scraping_report.md
+        echo "- 特性数据: $(find ability -name "*.json" | wc -l) 个文件" >> ../scraping_report.md
+        echo "- 招式数据: $(find move -name "*.json" | wc -l) 个文件" >> ../scraping_report.md
+        echo "- 版权绘图片: $(find images/dream -name "*.png" 2>/dev/null | wc -l) 个文件" >> ../scraping_report.md
+        echo "- 官方图片: $(find images/official -name "*.png" 2>/dev/null | wc -l) 个文件" >> ../scraping_report.md
+        echo "- Home图片: $(find images/home -name "*.png" 2>/dev/null | wc -l) 个文件" >> ../scraping_report.md
+        echo "" >> ../scraping_report.md
+        
+        # 统计文件大小
+        echo "## 数据大小统计" >> ../scraping_report.md
+        echo "- 总数据大小: $(du -sh . | cut -f1)" >> ../scraping_report.md
+        echo "- JSON数据大小: $(du -sh pokemon move ability *.json 2>/dev/null | tail -1 | cut -f1 || echo '0')" >> ../scraping_report.md
+        echo "- 图片数据大小: $(du -sh images 2>/dev/null | cut -f1 || echo '0')" >> ../scraping_report.md
+        echo "" >> ../scraping_report.md
+        
+        # 执行时间
+        echo "## 执行信息" >> ../scraping_report.md
+        echo "- 执行时间: $(date)" >> ../scraping_report.md
+        echo "- GitHub Actions Run ID: ${{ github.run_id }}" >> ../scraping_report.md
+        echo "- 是否跳过图片: ${{ github.event.inputs.skip_images }}" >> ../scraping_report.md
+        
+        # 显示报告
+        cat ../scraping_report.md
+
+    # 检查关键文件是否存在
+    - name: Verify critical files
+      run: |
+        echo "检查关键数据文件..."
+        files_to_check=(
+          "data/pokemon_list.json"
+          "data/pokemon_full_list.json"
+          "data/ability_list.json"
+          "data/move_list.json"
+        )
+        
+        missing_files=0
+        for file in "${files_to_check[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ $file 存在"
+          else
+            echo "❌ $file 缺失"
+            missing_files=$((missing_files + 1))
+          fi
+        done
+        
+        if [ $missing_files -gt 0 ]; then
+          echo "⚠️  有 $missing_files 个关键文件缺失，但继续处理..."
+        fi
+
+    # 压缩数据文件（不包含图片，单独处理）
+    - name: Compress data files
+      run: |
+        echo "压缩数据文件..."
+        # 压缩JSON数据
+        tar -czf pokemon-data-$(date +%Y%m%d).tar.gz \
+          data/*.json \
+          data/pokemon/ \
+          data/ability/ \
+          data/move/ \
+          scraping_report.md \
+          logs/ \
+          --exclude="*.png" \
+          --exclude="*.webp" \
+          --exclude="*.jpg" \
+          --exclude="*.jpeg"
+        
+        # 如果图片存在，单独压缩图片文件
+        if [ -d "data/images" ] && [ "$(find data/images -type f | wc -l)" -gt 0 ]; then
+          echo "压缩图片文件..."
+          tar -czf pokemon-images-$(date +%Y%m%d).tar.gz data/images/
+        fi
+        
+        # 显示压缩文件信息
+        echo "压缩文件信息:"
+        ls -lh *.tar.gz
+
+    # 上传数据文件作为artifact
+    - name: Upload data artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: pokemon-data-${{ github.run_number }}
+        path: pokemon-data-*.tar.gz
+        retention-days: 30
+
+    # 上传图片文件作为artifact（如果存在）
+    - name: Upload image artifacts
+      if: hashFiles('pokemon-images-*.tar.gz') != ''
+      uses: actions/upload-artifact@v3
+      with:
+        name: pokemon-images-${{ github.run_number }}
+        path: pokemon-images-*.tar.gz
+        retention-days: 30
+
+    # 上传日志文件
+    - name: Upload logs
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: scraping-logs-${{ github.run_number }}
+        path: |
+          logs/
+          scraping_report.md
+        retention-days: 7
+
+    # 发送通知（可选，需要配置secrets）
+    - name: Notify completion
+      if: always()
+      run: |
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "🎉 Pokemon数据抓取成功完成！"
+          echo "📊 数据文件已打包为: pokemon-data-$(date +%Y%m%d).tar.gz"
+          if [ -f "pokemon-images-$(date +%Y%m%d).tar.gz" ]; then
+            echo "🖼️  图片文件已打包为: pokemon-images-$(date +%Y%m%d).tar.gz"
+          fi
+          echo "📁 可从GitHub Actions页面的Artifacts中下载"
+        else
+          echo "❌ Pokemon数据抓取失败，请查看日志"
+        fi
+
+# 设置作业超时（4小时）
+  timeout-minutes: 240

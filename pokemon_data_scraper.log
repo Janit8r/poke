@@ -1,0 +1,6 @@
+2025-09-15 00:02:58,770 - progress.pokemon_list - INFO - 开始执行脚本: pokemon_list
+2025-09-15 00:02:58,771 - script.pokemon_list - INFO - [pokemon_list] 开始抓取宝可梦基础列表
+2025-09-15 00:02:58,772 - script.pokemon_list - INFO - [pokemon_list] 宝可梦列表文件较新，跳过抓取
+2025-09-15 00:02:58,772 - script.pokemon_list - ERROR - [pokemon_list] 宝可梦基础列表抓取失败
+2025-09-15 00:02:58,772 - progress.pokemon_list - INFO - 脚本执行完成: pokemon_list
+2025-09-15 00:02:58,773 - progress.pokemon_list - INFO - 总耗时: 0:00:00.002463
