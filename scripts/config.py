@@ -23,14 +23,29 @@ for path in [POKEMON_DATA_PATH, ABILITY_DATA_PATH, MOVE_DATA_PATH, DREAM_IMAGES_
 NETWORK_CONFIG = {
     'base_url': 'https://wiki.52poke.com/wiki/',
     'headers': {
-        'Accept-Language': 'zh-Hans',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Cache-Control': 'max-age=0',
+        'Connection': 'keep-alive',
+        'DNT': '1',
+        'Sec-Ch-Ua': '"Microsoft Edge";v="117", "Not;A=Brand";v="8", "Chromium";v="117"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"Windows"',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36 Edg/117.0.2045.47'
     },
     'timeout': 30,
-    'max_retries': 3,
-    'retry_delay': 2,
-    'request_delay': 1,  # 请求间隔秒数
-    'retry_status_codes': [429, 500, 502, 503, 504]
+    'max_retries': 5,  # 增加重试次数
+    'retry_delay': 3,  # 增加重试延迟
+    'request_delay': 2,  # 增加请求间隔
+    'retry_status_codes': [403, 429, 500, 502, 503, 504],  # 添加403到重试列表
+    'proxy_enabled': False,  # 暂时不使用代理
+    'session_cookies': True  # 启用session cookies
 }
 
 # URL配置

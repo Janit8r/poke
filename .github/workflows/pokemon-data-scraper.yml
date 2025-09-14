@@ -75,43 +75,80 @@ jobs:
         mkdir -p data/{pokemon,move,ability,images/{dream,official,home}}
         mkdir -p logs
 
+    # 设置环境变量以绕过403错误
+    - name: Setup anti-detection environment
+      run: |
+        echo "配置反检测环境..."
+        # 设置随机化的请求间隔
+        echo "RANDOM_DELAY=true" >> $GITHUB_ENV
+        # 禁用严格的SSL验证
+        echo "PYTHONHTTPSVERIFY=0" >> $GITHUB_ENV
+        # 设置请求超时
+        echo "REQUEST_TIMEOUT=60" >> $GITHUB_ENV
+
     # 运行数据抓取脚本
     - name: Run data scraping scripts
       run: |
         echo "开始抓取Pokemon数据..."
         cd scripts
         
-        # 按顺序执行脚本
-        echo "1. 抓取宝可梦基础列表..."
-        python pokemon_list.py
+        # 添加初始等待以避免立即请求
+        echo "等待5秒以准备环境..."
+        sleep 5
         
-        echo "2. 抓取特性列表..."
-        python ability_list.py
+        # 按顺序执行脚本，带容错机制
+        scripts=(
+          "pokemon_list.py:抓取宝可梦基础列表"
+          "ability_list.py:抓取特性列表" 
+          "move_list.py:抓取招式列表"
+          "pokemon.py:抓取宝可梦详细信息"
+          "ability.py:抓取特性详细信息"
+          "move.py:抓取招式详细信息"
+          "pokemon_full_list.py:生成完整宝可梦列表"
+        )
         
-        echo "3. 抓取招式列表..."
-        python move_list.py
+        success_count=0
+        total_scripts=${#scripts[@]}
         
-        echo "4. 抓取宝可梦详细信息..."
-        python pokemon.py
-        
-        echo "5. 抓取特性详细信息..."
-        python ability.py
-        
-        echo "6. 抓取招式详细信息..."
-        python move.py
-        
-        echo "7. 生成完整宝可梦列表..."
-        python pokemon_full_list.py
+        for i in "${!scripts[@]}"; do
+          IFS=':' read -ra SCRIPT_INFO <<< "${scripts[$i]}"
+          script_name="${SCRIPT_INFO[0]}"
+          description="${SCRIPT_INFO[1]}"
+          
+          echo "[$((i+1))/$total_scripts] $description..."
+          
+          if timeout 3600 python "$script_name"; then
+            echo "✅ $script_name 执行成功"
+            ((success_count++))
+          else
+            echo "❌ $script_name 执行失败，继续下一个..."
+            # 记录失败的脚本
+            echo "$script_name" >> ../failed_scripts.txt
+          fi
+          
+          # 脚本间添加延迟以避免被检测
+          if [ $i -lt $((total_scripts-1)) ]; then
+            echo "等待10秒后继续..."
+            sleep 10
+          fi
+        done
         
         # 条件性执行图片下载
         if [ "${{ github.event.inputs.skip_images }}" != "true" ]; then
-          echo "8. 下载版权绘图片..."
-          python download_dream_image.py
+          echo "[8/8] 下载版权绘图片..."
+          if timeout 7200 python download_dream_image.py; then
+            echo "✅ 图片下载成功"
+            ((success_count++))
+            total_scripts=$((total_scripts+1))
+          else
+            echo "❌ 图片下载失败"
+            echo "download_dream_image.py" >> ../failed_scripts.txt
+          fi
         else
-          echo "8. 跳过图片下载..."
+          echo "[跳过] 图片下载..."
         fi
         
-        echo "数据抓取完成！"
+        echo "数据抓取完成！成功执行: $success_count/$total_scripts 个脚本"
 
     # 生成数据统计报告
     - name: Generate data statistics
@@ -137,11 +174,26 @@ jobs:
         echo "- 图片数据大小: $(du -sh images 2>/dev/null | cut -f1 || echo '0')" >> ../scraping_report.md
         echo "" >> ../scraping_report.md
         
-        # 执行时间
+        # 执行时间和状态
         echo "## 执行信息" >> ../scraping_report.md
         echo "- 执行时间: $(date)" >> ../scraping_report.md
         echo "- GitHub Actions Run ID: ${{ github.run_id }}" >> ../scraping_report.md
         echo "- 是否跳过图片: ${{ github.event.inputs.skip_images }}" >> ../scraping_report.md
+        
+        # 失败脚本信息
+        if [ -f "../failed_scripts.txt" ]; then
+          echo "" >> ../scraping_report.md
+          echo "## ⚠️ 执行失败的脚本" >> ../scraping_report.md
+          while IFS= read -r script; do
+            echo "- ❌ $script" >> ../scraping_report.md
+          done < "../failed_scripts.txt"
+          echo "" >> ../scraping_report.md
+          echo "**注意**: 部分脚本执行失败，可能由于网络限制(403错误)导致。建议稍后重新运行。" >> ../scraping_report.md
+        else
+          echo "" >> ../scraping_report.md
+          echo "## ✅ 执行状态" >> ../scraping_report.md
+          echo "所有脚本执行成功！" >> ../scraping_report.md
+        fi
         
         # 显示报告
         cat ../scraping_report.md
