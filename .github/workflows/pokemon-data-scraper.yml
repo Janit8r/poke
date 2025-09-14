@@ -252,7 +252,7 @@ jobs:
 
     # 上传数据文件作为artifact
     - name: Upload data artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: pokemon-data-${{ github.run_number }}
         path: pokemon-data-*.tar.gz
@@ -261,7 +261,7 @@ jobs:
     # 上传图片文件作为artifact（如果存在）
     - name: Upload image artifacts
       if: hashFiles('pokemon-images-*.tar.gz') != ''
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: pokemon-images-${{ github.run_number }}
         path: pokemon-images-*.tar.gz
@@ -270,7 +270,7 @@ jobs:
     # 上传日志文件
     - name: Upload logs
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: scraping-logs-${{ github.run_number }}
         path: |
